@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-OBJECTDIR=/tmp/rustmodule
+OBJECTDIR=target/objects
 CURDIR=`pwd`
 MODULE_NAME="bsd_rust"
 

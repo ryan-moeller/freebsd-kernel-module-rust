@@ -23,8 +23,8 @@
 //
 // Based on public domain code by Johannes Lundberg
 
-#include <sys/types.h>
 #include <sys/param.h>  /* defines used in kernel.h */
+#include <sys/types.h>
 #include <sys/module.h>
 #include <sys/systm.h>  /* uprintf */
 #include <sys/kernel.h> /* types used in module initialization */

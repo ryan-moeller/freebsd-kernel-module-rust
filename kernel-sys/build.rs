@@ -25,14 +25,14 @@
 
 extern crate bindgen;
 
-use bindgen::{Builder, MacroTypeVariation::Signed};
+use bindgen::{Builder, Formatter, MacroTypeVariation::Signed};
 use std::path::PathBuf;
 
 const FILEPATH: &str = "src/bindings.rs";
 
 fn main() {
     let bindings = Builder::default()
-        .rustfmt_bindings(true)
+        .formatter(Formatter::Rustfmt)
         .use_core()
         .ctypes_prefix("libc")
         .size_t_is_usize(true)

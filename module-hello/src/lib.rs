@@ -68,7 +68,7 @@ fn panic_handler(info: &PanicInfo) -> ! {
 }
 
 /// Main event handler for module events
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn module_event(
     _module: bsd_kernel::Module,
     event: c_int,

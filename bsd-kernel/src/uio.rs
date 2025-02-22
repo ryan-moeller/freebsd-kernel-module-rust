@@ -150,7 +150,7 @@ impl Write for UioWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         // Temporary add a uiomove function that takes immutable buffer
         // instead of mutable
-        extern "C" {
+        unsafe extern "C" {
             pub fn uiomove(
                 cp: *const c_void,
                 n: c_int,

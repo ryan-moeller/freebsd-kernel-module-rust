@@ -3,6 +3,7 @@ export_syms
 *.o
 *.ko
 machine
+i386
 x86
 opt_global.h
 kernel-sys/src/bindings.rs
