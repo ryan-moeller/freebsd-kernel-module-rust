@@ -101,35 +101,42 @@ where
             Box::into_raw(Box::new(c))
         };
 
-        let cdev_raw: *mut kernel_sys::cdev = unsafe {
-            kernel_sys::make_dev(
-                cdevsw_raw,
-                0,
-                kernel_sys::UID_ROOT as u32,
-                kernel_sys::GID_WHEEL as u32,
-                0o660,
+        let mut args = mem::MaybeUninit::<kernel_sys::make_dev_args>::uninit();
+        let mut args = unsafe {
+            let p = args.as_mut_ptr();
+            let len = mem::size_of::<kernel_sys::make_dev_args>();
+            kernel_sys::make_dev_args_init_impl(p, len);
+            args.assume_init()
+        };
+        args.mda_flags =
+            kernel_sys::MAKEDEV_WAITOK | kernel_sys::MAKEDEV_CHECKNAME;
+        args.mda_devsw = cdevsw_raw;
+        args.mda_uid = kernel_sys::UID_ROOT as u32;
+        args.mda_gid = kernel_sys::GID_WHEEL as u32;
+        args.mda_mode = 0o660;
+
+        let mut cdev_raw = mem::MaybeUninit::<*mut kernel_sys::cdev>::uninit();
+        let res = unsafe {
+            kernel_sys::make_dev_s(
+                &raw mut args,
+                cdev_raw.as_mut_ptr(),
                 cstr_ref!(name).as_ptr() as *mut i8,
             )
         };
-
-        match cdev_raw.is_null() {
-            true => {
-                // Convert cdevsw back to Box so memory can be freed
-                let _cdevsw = unsafe { Box::from_raw(cdevsw_raw) };
-                None
-            }
-            false => {
-                let cdev = Box::new(CDev {
-                    cdev: ptr::NonNull::new(cdev_raw).unwrap(),
-                    delegate,
-                });
-                unsafe {
-                    (*cdev_raw).si_drv1 =
-                        &*cdev as *const CDev<T> as *mut libc::c_void
-                };
-                Some(cdev)
-            }
+        if res != 0 {
+            // Convert cdevsw back to Box so memory can be freed
+            let _cdevsw = unsafe { Box::from_raw(cdevsw_raw) };
+            return None;
         }
+        let cdev_raw = unsafe { cdev_raw.assume_init() };
+        let cdev = Box::new(CDev {
+            cdev: ptr::NonNull::new(cdev_raw).unwrap(),
+            delegate,
+        });
+        unsafe {
+            (*cdev_raw).si_drv1 = &*cdev as *const CDev<T> as *mut libc::c_void
+        };
+        Some(cdev)
     }
 }
 
