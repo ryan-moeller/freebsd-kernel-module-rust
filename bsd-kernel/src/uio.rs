@@ -39,28 +39,19 @@ use libc::{c_int, c_void};
 /// https://nixdoc.net/man-pages/FreeBSD/man9/uio.9.html
 pub struct UioReader {
     uio: ptr::NonNull<kernel_sys::uio>,
-    offset: usize,
-    remain: usize,
 }
 
-#[allow(clippy::len_without_is_empty)]
 impl UioReader {
-    /// Create a new UioReader instance from a kernel uio pointer
-    ///
-    /// # Safety
-    /// The unsafe part is `(*(*uio).uio_iov).iov_len` which assumes
-    /// that `uio.uio_iov` is nonnull.
-    pub unsafe fn new(uio: *mut kernel_sys::uio) -> Self {
+    /// Create a new UioReader instance from a kernel uio pointer.
+    pub fn new(uio: *mut kernel_sys::uio) -> Self {
         UioReader {
             uio: ptr::NonNull::new(uio).unwrap(),
-            offset: 0,
-            remain: (*(*uio).uio_iov).iov_len,
         }
     }
 
-    /// "The number of bytes to process"
-    pub fn len(&self) -> usize {
-        unsafe { self.uio.as_ref().uio_resid as usize }
+    /// The remaining number of bytes to process, updated after transfer.
+    pub fn residual(&self) -> isize {
+        unsafe { self.uio.as_ref().uio_resid }
     }
 }
 
@@ -68,41 +59,26 @@ impl Read for UioReader {
     // A reader is implemented for reading data from userland to kernel.
     // That is, for d_write callback.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let buf_len: usize = buf.len();
-        let iov_len: usize =
-            unsafe { (*self.uio.as_ref().uio_iov).iov_len } - self.offset;
-        let len = cmp::min(buf_len, iov_len);
-
-        if len == 0 {
-            return Ok(0);
-        }
-
-        // If buf is at least as long as iov then there is no remainder,
-        // otherwise remainder is the difference
-        self.remain = iov_len.saturating_sub(buf_len);
-        /*   if buf_len < iov_len {
-                    // Still got some data to read
-                    self.remain =(iov_len - buf_len )as u64 ;
-                } else {
-                    // We read everything already
-                    self.remain = 0;
-                }
-        */
-        // Change to uiomove?
+        let buf_len = i32::try_from(buf.len()).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "buf.len() out of range",
+            )
+        })?;
+        let orig_resid = self.residual();
         let ret = unsafe {
-            kernel_sys::copyin(
-                (*self.uio.as_ref().uio_iov).iov_base.add(self.offset),
-                buf.as_mut_ptr() as *mut c_void,
-                len,
+            let offset = self.uio.as_ref().uio_offset;
+            kernel_sys::uiomove_frombuf(
+                buf.as_mut_ptr().offset(offset as isize) as *mut c_void,
+                buf_len.checked_sub(offset.try_into().unwrap()).unwrap(),
+                self.uio.as_mut(),
             )
         };
-        self.offset += len;
-
         match ret {
-            0 => Ok(len),
+            0 => Ok((orig_resid - self.residual()).try_into().unwrap()),
             _ => Err(io::Error::new(
                 io::ErrorKind::Other,
-                "UioReader::read copyin failed.",
+                "UioReader::read uiomove failed.",
             )),
         }
     }
@@ -110,13 +86,7 @@ impl Read for UioReader {
 
 impl fmt::Debug for UioReader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "UioReader {{ uio: {:?}, offset: {}, remain: {} }}",
-            self.uio.as_ptr(),
-            self.offset,
-            self.remain
-        )
+        write!(f, "UioReader {{ uio: {:?} }}", self.uio.as_ptr())
     }
 }
 
@@ -128,7 +98,6 @@ pub struct UioWriter {
     uio: ptr::NonNull<kernel_sys::uio>,
 }
 
-#[allow(clippy::len_without_is_empty)]
 impl UioWriter {
     /// Create a new UioWriter
     ///
@@ -140,9 +109,9 @@ impl UioWriter {
         }
     }
 
-    /// Returns the number of bytes to process
-    pub fn len(&self) -> usize {
-        unsafe { self.uio.as_ref().uio_resid as usize }
+    /// The remaining number of bytes to process, updated after transfer.
+    pub fn residual(&self) -> isize {
+        unsafe { self.uio.as_ref().uio_resid }
     }
 }
 

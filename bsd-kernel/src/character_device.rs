@@ -241,8 +241,7 @@ where
     // debugln!("cdev_write");
     let cdev: &CDev<T> = unsafe { &*((*dev).si_drv1 as *const CDev<T>) };
     if let Some(mut m) = cdev.delegate.lock() {
-        let mut reader = unsafe { UioReader::new(uio) };
-        m.write(&mut reader);
+        m.write(&mut UioReader::new(uio));
     }
     0
 }
