@@ -53,11 +53,7 @@ static ALLOCATOR: KernelAllocator = KernelAllocator;
 
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
-    if let Some(s) = info.payload().downcast_ref::<&str>() {
-        println!("Panic occurred: {}", s);
-    } else {
-        println!("Panic occurred");
-    }
+    println!("Panic occurred");
 
     if let Some(loc) = info.location() {
         println!("Panic at line `{}` of file `{}`", loc.line(), loc.file());
