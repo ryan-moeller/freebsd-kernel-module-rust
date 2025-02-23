@@ -23,7 +23,6 @@
 //
 // Based on public domain code by Johannes Lundberg
 
-use crate::cstr;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{fmt, ptr};
@@ -42,20 +41,10 @@ impl fmt::Write for KernelDebugWriter {
                 &mut kernel_sys::M_DEVBUF[0],
                 kernel_sys::M_WAITOK,
             ) as *mut c_char;
-            if ptr.is_null() {
-                let msg =
-                    cstr!("Failed to allocate memory for dynamic printf()\n");
-                let ptr = msg.as_ptr() as *const c_char;
-                kernel_sys::uprintf(ptr);
-            } else {
-                ptr::copy(message.as_ptr(), ptr as *mut u8, message.len());
-                ptr::write(ptr.add(message.len()), 0);
-                kernel_sys::uprintf(ptr);
-                kernel_sys::free(
-                    ptr as *mut c_void,
-                    &mut kernel_sys::M_DEVBUF[0],
-                );
-            }
+            ptr::copy(message.as_ptr(), ptr as *mut u8, message.len());
+            ptr::write(ptr.add(message.len()), 0);
+            kernel_sys::uprintf(ptr);
+            kernel_sys::free(ptr as *mut c_void, &mut kernel_sys::M_DEVBUF[0]);
         }
         Ok(())
     }
