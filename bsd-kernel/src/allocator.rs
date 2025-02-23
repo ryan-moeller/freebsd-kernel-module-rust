@@ -29,18 +29,22 @@ pub struct KernelAllocator;
 
 unsafe impl GlobalAlloc for KernelAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        kernel_sys::malloc(
-            layout.size(),
-            &mut kernel_sys::M_DEVBUF[0],
-            kernel_sys::M_WAITOK,
-        ) as *mut u8
+        unsafe {
+            kernel_sys::malloc(
+                layout.size(),
+                &mut kernel_sys::M_DEVBUF[0],
+                kernel_sys::M_WAITOK,
+            ) as *mut u8
+        }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        kernel_sys::free(
-            ptr as *mut libc::c_void,
-            &mut kernel_sys::M_DEVBUF[0],
-        );
+        unsafe {
+            kernel_sys::free(
+                ptr as *mut libc::c_void,
+                &mut kernel_sys::M_DEVBUF[0],
+            );
+        }
     }
 }
 
