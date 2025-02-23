@@ -25,7 +25,9 @@
 
 extern crate bindgen;
 
-use bindgen::{Builder, Formatter, MacroTypeVariation::Signed};
+use bindgen::{
+    Builder, Formatter, MacroTypeVariation::Signed, RustEdition, RustTarget,
+};
 use std::path::PathBuf;
 
 const FILEPATH: &str = "src/bindings.rs";
@@ -33,10 +35,13 @@ const FILEPATH: &str = "src/bindings.rs";
 fn main() {
     let bindings = Builder::default()
         .formatter(Formatter::Rustfmt)
+        .rust_target(RustTarget::nightly())
+        .rust_edition(RustEdition::Edition2024)
         .use_core()
         .ctypes_prefix("libc")
         .size_t_is_usize(true)
         .default_macro_constant_type(Signed)
+        .wrap_unsafe_ops(true)
         .header("wrapper.h")
         .clang_arg("-O2")
         .clang_arg("-pipe")
