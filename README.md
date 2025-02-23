@@ -8,6 +8,10 @@ tested with Rust version `1.87.0-nightly (794c12416 2025-02-21)`
 For more information, see the [accompanying blog post](https://research.nccgroup.com/2022/08/31/writing-freebsd-kernel-modules-in-rust/).
 
 ### Setup
+* Install libclang:
+```bash
+sudo pkg install llvm19
+```
 * Install Rust via Rustup
 * `rustup component add rust-src`
 * Generate the kernel bindings:
