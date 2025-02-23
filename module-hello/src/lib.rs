@@ -24,7 +24,6 @@
 // Based on public domain code by Johannes Lundberg
 
 #![no_std]
-#![feature(default_alloc_error_handler)]
 
 //! Example kernel module for FreeBSD written in Rust
 //!
