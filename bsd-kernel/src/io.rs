@@ -165,7 +165,7 @@ fn read_to_end<R: Read + ?Sized>(
             buf.resize(len + new_write_size, 0);
         }
 
-        match r.read(&mut buf[len..]) {
+        match r.read(buf) {
             Ok(0) => {
                 ret = Ok(len - start_len);
                 break;
@@ -233,6 +233,7 @@ pub trait Write {
     fn write(&mut self, buf: &[u8]) -> Result<usize>;
     fn flush(&mut self) -> Result<()>;
     fn write_all(&mut self, mut buf: &[u8]) -> Result<()> {
+        /* FIXME: uiomove_frombuf expects to see the whole buffer */
         while !buf.is_empty() {
             match self.write(buf) {
                 Ok(0) => {
