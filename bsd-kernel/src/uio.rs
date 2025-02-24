@@ -52,37 +52,22 @@ impl UioReader {
     pub fn residual(&self) -> isize {
         unsafe { self.uio.as_ref().uio_resid }
     }
-
-    /// The offset into the device.
-    pub fn offset(&self) -> i64 {
-        unsafe { self.uio.as_ref().uio_offset }
-    }
 }
 
 impl Read for UioReader {
     // A reader is implemented for reading data from userland to kernel.
     // That is, for d_write callback.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let offset: usize = self.offset().try_into().map_err(|_| {
+        let len: i32 = buf.len().try_into().map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "uio.uio_offset out of usize range",
-            )
-        })?;
-        let len = buf.len().checked_sub(offset).ok_or(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "buf.len() - uio.uio_offset out of usize range",
-        ))?;
-        let len: i32 = len.try_into().map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "buf.len() - uio.uio_offset out of i32 range",
+                "buf.len() out of i32 range",
             )
         })?;
         let orig_resid = self.residual();
         let ret = unsafe {
             kernel_sys::uiomove_frombuf(
-                buf.as_mut_ptr().add(offset) as *mut c_void,
+                buf.as_mut_ptr() as *mut c_void,
                 len,
                 self.uio.as_mut(),
             )
@@ -139,35 +124,20 @@ impl UioWriter {
     pub fn residual(&self) -> isize {
         unsafe { self.uio.as_ref().uio_resid }
     }
-
-    /// The offset into the device.
-    pub fn offset(&self) -> i64 {
-        unsafe { self.uio.as_ref().uio_offset }
-    }
 }
 
 impl Write for UioWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let offset: usize = self.offset().try_into().map_err(|_| {
+        let len: i32 = buf.len().try_into().map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "uio.uio_offset out of usize range",
-            )
-        })?;
-        let len = buf.len().checked_sub(offset).ok_or(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "buf.len() - uio.uio_offset out of usize range",
-        ))?;
-        let len: i32 = len.try_into().map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "buf.len() - uio.uio_offset out of i32 range",
+                "buf.len() out of i32 range",
             )
         })?;
         let orig_resid = self.residual();
         let ret = unsafe {
             kernel_sys::uiomove_frombuf(
-                buf.as_ptr().add(offset) as *const c_void as *mut c_void,
+                buf.as_ptr() as *const c_void as *mut c_void,
                 len,
                 self.uio.as_ptr(),
             )
