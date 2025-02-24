@@ -95,8 +95,8 @@ impl CharacterDevice for Hello {
         // debugln!("[module.rs] Hello::read");
 
         if let Some(ref h) = self.inner {
-            match uio.write_all(&h.data.as_bytes()) {
-                Ok(()) => (),
+            match uio.write(&h.data.as_bytes()) {
+                Ok(_) => (),
                 Err(e) => debugln!("{}", e),
             }
         }
