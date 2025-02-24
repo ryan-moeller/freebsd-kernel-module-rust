@@ -88,9 +88,20 @@ impl Read for UioReader {
             )
         };
         match ret {
-            0 => (orig_resid - self.residual()).try_into().map_err(|_| {
-                io::Error::new(io::ErrorKind::Other, "result out of range")
-            }),
+            0 => {
+                let amount = orig_resid.checked_sub(self.residual()).ok_or(
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "result out of isize range",
+                    ),
+                )?;
+                amount.try_into().map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "result out of usize range",
+                    )
+                })
+            }
             _ => Err(io::Error::new(
                 io::ErrorKind::Other,
                 format!("uiomove_frombuf failed with return code {}", ret),
@@ -162,9 +173,20 @@ impl Write for UioWriter {
             )
         };
         match ret {
-            0 => (orig_resid - self.residual()).try_into().map_err(|_| {
-                io::Error::new(io::ErrorKind::Other, "result out of range")
-            }),
+            0 => {
+                let amount = orig_resid.checked_sub(self.residual()).ok_or(
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "result out of isize range",
+                    ),
+                )?;
+                amount.try_into().map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "result out of usize range",
+                    )
+                })
+            }
             _ => Err(io::Error::new(
                 io::ErrorKind::Other,
                 format!("uiomove_frombuf failed with return code {}", ret),
