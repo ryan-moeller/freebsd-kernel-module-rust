@@ -160,11 +160,13 @@ where
         let dev: *mut kernel_sys::cdev = self.cdev.as_ptr();
 
         // Back to Box so cdevsw memory is freed
-        let _cdevsw: Box<kernel_sys::cdevsw> =
+        let cdevsw: Box<kernel_sys::cdevsw> =
             unsafe { Box::from_raw((*dev).si_devsw) };
 
         // debugln!("[kernel.rs] CDev::drop calling destroy_dev. ptr={:?}", dev.as_ptr());
         unsafe { kernel_sys::destroy_dev(dev) };
+
+        drop(cdevsw);
     }
 }
 
