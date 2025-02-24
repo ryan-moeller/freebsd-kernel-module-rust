@@ -52,6 +52,11 @@ impl UioReader {
     pub fn residual(&self) -> isize {
         unsafe { self.uio.as_ref().uio_resid }
     }
+
+    /// The offset into the device.
+    pub fn offset(&self) -> i64 {
+        unsafe { self.uio.as_ref().uio_offset }
+    }
 }
 
 impl Read for UioReader {
@@ -123,6 +128,11 @@ impl UioWriter {
     /// The remaining number of bytes to process, updated after transfer.
     pub fn residual(&self) -> isize {
         unsafe { self.uio.as_ref().uio_resid }
+    }
+
+    /// The offset into the device.
+    pub fn offset(&self) -> i64 {
+        unsafe { self.uio.as_ref().uio_offset }
     }
 }
 

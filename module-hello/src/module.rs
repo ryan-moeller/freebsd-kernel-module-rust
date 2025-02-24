@@ -104,7 +104,9 @@ impl CharacterDevice for Hello {
     fn write(&mut self, uio: &mut UioReader) {
         // debugln!("[module.rs] Hello::write");
         if let Some(ref mut inner) = self.inner {
-            inner.data.clear();
+            if uio.offset() == 0 {
+                inner.data.clear();
+            }
             match uio.read_to_string(&mut inner.data) {
                 Ok(x) => {
                     debugln!(
