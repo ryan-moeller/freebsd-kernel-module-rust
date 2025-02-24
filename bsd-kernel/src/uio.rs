@@ -59,23 +59,35 @@ impl Read for UioReader {
     // A reader is implemented for reading data from userland to kernel.
     // That is, for d_write callback.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let buf_len = i32::try_from(buf.len()).map_err(|_| {
+        let offset = unsafe { self.uio.as_ref().uio_offset };
+        let offset: usize = offset.try_into().map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "buf.len() out of range",
+                "uio.uio_offset out of usize range",
+            )
+        })?;
+        let len = buf.len().checked_sub(offset).ok_or(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "buf.len() - uio.uio_offset out of usize range",
+        ))?;
+        let len: i32 = len.try_into().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "buf.len() - uio.uio_offset out of i32 range",
             )
         })?;
         let orig_resid = self.residual();
         let ret = unsafe {
-            let offset = self.uio.as_ref().uio_offset;
             kernel_sys::uiomove_frombuf(
-                buf.as_mut_ptr().offset(offset as isize) as *mut c_void,
-                buf_len.checked_sub(offset.try_into().unwrap()).unwrap(),
+                buf.as_mut_ptr().add(offset) as *mut c_void,
+                len,
                 self.uio.as_mut(),
             )
         };
         match ret {
-            0 => Ok((orig_resid - self.residual()).try_into().unwrap()),
+            0 => (orig_resid - self.residual()).try_into().map_err(|_| {
+                io::Error::new(io::ErrorKind::Other, "result out of range")
+            }),
             _ => Err(io::Error::new(
                 io::ErrorKind::Other,
                 "UioReader::read uiomove failed.",
