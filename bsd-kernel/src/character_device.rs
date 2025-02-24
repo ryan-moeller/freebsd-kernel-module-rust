@@ -133,9 +133,7 @@ where
             cdev: ptr::NonNull::new(cdev_raw).unwrap(),
             delegate,
         });
-        unsafe {
-            (*cdev_raw).si_drv1 = &*cdev as *const CDev<T> as *mut libc::c_void
-        };
+        unsafe { (*cdev_raw).si_drv1 = &raw const *cdev as *mut libc::c_void };
         Some(cdev)
     }
 }
