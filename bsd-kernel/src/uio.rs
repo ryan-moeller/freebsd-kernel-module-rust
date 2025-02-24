@@ -28,7 +28,7 @@
 
 use crate::io::{self, Read, Write};
 use alloc::format;
-use core::fmt;
+use core::{fmt, isize};
 use core::prelude::v1::*;
 use core::{cmp, ptr};
 use libc::{c_int, c_void};
@@ -53,14 +53,18 @@ impl UioReader {
     pub fn residual(&self) -> isize {
         unsafe { self.uio.as_ref().uio_resid }
     }
+
+    /// The offset into the device.
+    pub fn offset(&self) -> i64 {
+        unsafe { self.uio.as_ref().uio_offset }
+    }
 }
 
 impl Read for UioReader {
     // A reader is implemented for reading data from userland to kernel.
     // That is, for d_write callback.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let offset = unsafe { self.uio.as_ref().uio_offset };
-        let offset: usize = offset.try_into().map_err(|_| {
+        let offset: usize = self.offset().try_into().map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "uio.uio_offset out of usize range",
@@ -125,6 +129,11 @@ impl UioWriter {
     pub fn residual(&self) -> isize {
         unsafe { self.uio.as_ref().uio_resid }
     }
+
+    /// The offset into the device.
+    pub fn offset(&self) -> i64 {
+        unsafe { self.uio.as_ref().uio_offset }
+    }
 }
 
 impl Write for UioWriter {
@@ -139,8 +148,8 @@ impl Write for UioWriter {
             ) -> c_int;
         }
 
-        let offset = unsafe { self.uio.as_ref().uio_offset as usize };
-        let amount_uio = unsafe { self.uio.as_ref().uio_resid as usize };
+        let offset = self.offset() as usize;
+        let amount_uio = self.residual() as usize;
         let amount_buf = match buf.len() - offset {
             x if x > 0 => x,
             _ => 0,
