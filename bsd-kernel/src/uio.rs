@@ -28,10 +28,9 @@
 
 use crate::io::{self, Read, Write};
 use alloc::format;
-use core::{fmt, isize};
 use core::prelude::v1::*;
-use core::{cmp, ptr};
-use libc::{c_int, c_void};
+use core::{fmt, isize, ptr};
+use libc::c_void;
 
 /// Wrapper around the kernel device driver I/O interfaces providing
 /// methods to read data from userland to the kernel
@@ -94,7 +93,7 @@ impl Read for UioReader {
             }),
             _ => Err(io::Error::new(
                 io::ErrorKind::Other,
-                "UioReader::read uiomove failed.",
+                format!("uiomove_frombuf failed with return code {}", ret),
             )),
         }
     }
@@ -138,43 +137,37 @@ impl UioWriter {
 
 impl Write for UioWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        // Temporary add a uiomove function that takes immutable buffer
-        // instead of mutable
-        unsafe extern "C" {
-            pub fn uiomove(
-                cp: *const c_void,
-                n: c_int,
-                uio: *mut kernel_sys::uio,
-            ) -> c_int;
-        }
-
-        let offset = self.offset() as usize;
-        let amount_uio = self.residual() as usize;
-        let amount_buf = match buf.len() - offset {
-            x if x > 0 => x,
-            _ => 0,
-        };
-        // debugln!("===> offest {}, amount uio {}, amount buf {}", offset, amount_uio, amount_buf);
-
-        let amount = cmp::min(amount_buf, amount_uio);
-        if amount == 0 {
-            // return offset here so write_all know that we've already
-            // read all bytes.
-            return Ok(offset);
-        }
-
+        let offset: usize = self.offset().try_into().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "uio.uio_offset out of usize range",
+            )
+        })?;
+        let len = buf.len().checked_sub(offset).ok_or(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "buf.len() - uio.uio_offset out of usize range",
+        ))?;
+        let len: i32 = len.try_into().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "buf.len() - uio.uio_offset out of i32 range",
+            )
+        })?;
+        let orig_resid = self.residual();
         let ret = unsafe {
-            uiomove(
-                buf[offset as usize..].as_ptr() as *const c_void,
-                amount as i32,
+            kernel_sys::uiomove_frombuf(
+                buf.as_ptr().add(offset) as *const c_void as *mut c_void,
+                len,
                 self.uio.as_ptr(),
             )
         };
         match ret {
-            0 => Ok(amount),
+            0 => (orig_resid - self.residual()).try_into().map_err(|_| {
+                io::Error::new(io::ErrorKind::Other, "result out of range")
+            }),
             _ => Err(io::Error::new(
                 io::ErrorKind::Other,
-                format!("uiomove failed with return code {}", ret),
+                format!("uiomove_frombuf failed with return code {}", ret),
             )),
         }
     }
