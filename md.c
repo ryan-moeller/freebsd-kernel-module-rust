@@ -1,4 +1,4 @@
-// Copyright (c) 2022 NCC Group
+// Copyright (c) 2025 Ryan Moeller
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -20,24 +20,14 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Based on public domain code by Johannes Lundberg
 
 #include <sys/param.h>
-#include <sys/module.h>
 #include <sys/kernel.h>
-#include <sys/systm.h>
-#include <sys/types.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
 #include <sys/malloc.h>
 
-extern int module_event(struct module *, int, void *);
+#include <geom/geom.h>
 
-static moduledata_t module_data = {
-    "hello",        /* module name */
-     module_event,  /* event handler */
-     NULL           /* extra data */
-};
+extern struct g_class g_md_class;
 
-DECLARE_MODULE(hello, module_data, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+DECLARE_GEOM_CLASS(g_md_class, g_md);
+MODULE_VERSION(geom_md, 0);

@@ -23,15 +23,45 @@
 //
 // Based on public domain code by Johannes Lundberg
 
+#include "opt_geom.h"
+#include "opt_md.h"
+
 #include <sys/param.h>  /* defines used in kernel.h */
-#include <sys/types.h>
-#include <sys/module.h>
 #include <sys/systm.h>  /* uprintf */
-#include <sys/kernel.h> /* types used in module initialization */
+#include <sys/bio.h>
 #include <sys/conf.h>   /* cdevsw struct */
-#include <sys/uio.h>    /* uio struct */
-#include <sys/malloc.h>
+#include <sys/devicestat.h>
+#include <sys/fcntl.h>
+#include <sys/kernel.h> /* types used in module initialization */
 #include <sys/kthread.h>
-#include <sys/unistd.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
+#include <sys/mdioctl.h>
+#include <sys/mount.h>
 #include <sys/mutex.h>
+#include <sys/namei.h>
+//#include <sys/proc.h>
+//#include <sys/sched.h>
+#include <sys/sf_buf.h>
+#include <sys/sysctl.h>
+#include <sys/uio.h>    /* uio struct */
+#include <sys/unistd.h>
+#include <sys/vnode.h>
+#include <sys/disk.h>
+
+#include <geom/geom.h>
+#include <geom/geom_int.h>
+
+/*
+#include <vm/vm.h>
+#include <vm/vm_extern.h>
+#include <vm/vm_param.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page.h>
+#include <vm/vm_pager.h>
+#include <vm/swap_pager.h>
+#include <vm/uma.h>
+*/
+
+#include <machine/bus.h>

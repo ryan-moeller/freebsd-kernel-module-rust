@@ -38,13 +38,14 @@
 //! ```
 
 use bsd_kernel::allocator::KernelAllocator;
-use bsd_kernel::module::{ModuleEventType, ModuleEvents};
-use bsd_kernel::{debugln, println};
+use bsd_kernel::kernel_sys;
+use bsd_kernel::{cstr, println};
 use core::panic::PanicInfo;
-use libc::{c_int, c_void};
-use module::MODULE;
-
-mod module;
+use core::ptr;
+use kernel_sys::{
+    G_VERSION, bio, g_class, g_consumer, g_geom, g_provider, sbuf,
+};
+use libc::{c_char, c_int};
 
 extern crate alloc;
 
@@ -62,43 +63,60 @@ fn panic_handler(info: &PanicInfo) -> ! {
     loop {}
 }
 
-/// Main event handler for module events
+#[allow(non_upper_case_globals)]
 #[unsafe(no_mangle)]
-pub extern "C" fn module_event(
-    _module: bsd_kernel::Module,
-    event: c_int,
-    _arg: *mut c_void,
+#[used]
+pub static mut g_md_class: g_class = g_class {
+    name: cstr!("MD").as_ptr() as *const c_char,
+    version: G_VERSION as u32,
+    spare0: 0,
+    taste: None,
+    ctlreq: None,
+    init: Some(g_md_init),
+    fini: Some(g_md_fini),
+    destroy_geom: None,
+    start: Some(g_md_start),
+    spoiled: None,
+    attrchanged: None,
+    dumpconf: Some(g_md_dumpconf),
+    access: Some(g_md_access),
+    orphan: None,
+    ioctl: None,
+    providergone: Some(g_md_providergone),
+    resize: None,
+    spare1: ptr::null_mut(),
+    spare2: ptr::null_mut(),
+    class: kernel_sys::g_class__bindgen_ty_1 {
+        le_next: ptr::null_mut(),
+        le_prev: ptr::null_mut(),
+    },
+    geom: kernel_sys::g_class__bindgen_ty_2 {
+        lh_first: ptr::null_mut(),
+    },
+};
+
+extern "C" fn g_md_init(_mp: *mut g_class) {}
+
+extern "C" fn g_md_fini(_mp: *mut g_class) {}
+
+extern "C" fn g_md_start(_bio: *mut bio) {}
+
+extern "C" fn g_md_dumpconf(
+    _sb: *mut sbuf,
+    _indent: *const c_char,
+    _gp: *mut g_geom,
+    _cp: *mut g_consumer,
+    _pp: *mut g_provider,
+) {
+}
+
+extern "C" fn g_md_access(
+    _pp: *mut g_provider,
+    _r: c_int,
+    _w: c_int,
+    _e: c_int,
 ) -> c_int {
-    // debugln!("[interface.rs] Got event {}", event);
-
-    if let Some(ev) = ModuleEventType::from_i32(event) {
-        use ModuleEventType::*;
-        match ev {
-            Load => {
-                // debugln!("[interface.rs] MOD_LOAD");
-
-                if let Some(mut m) = MODULE.lock() {
-                    m.load();
-                }
-            }
-            Unload => {
-                // debugln!("[interface.rs] MOD_UNLOAD");
-
-                if let Some(mut m) = MODULE.lock() {
-                    m.unload();
-                }
-
-                MODULE.cleanup();
-            }
-            Quiesce => {
-                // debugln!("[interface.rs] MOD_QUIESCE");
-            }
-            Shutdown => {
-                // debugln!("[interface.rs] MOD_SHUTDOWN");
-            }
-        }
-    } else {
-        debugln!("[interface.rs] Undefined event");
-    }
     0
 }
+
+extern "C" fn g_md_providergone(_pp: *mut g_provider) {}

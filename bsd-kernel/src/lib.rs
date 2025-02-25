@@ -35,11 +35,8 @@ pub use kernel_sys::module_t as Module;
 extern crate alloc;
 
 pub mod allocator;
-pub mod character_device;
 pub mod error;
 pub mod io;
-pub mod module;
-pub mod uio;
 
 /// Create a null-terminated constant string at compile time
 #[macro_export]

@@ -2,7 +2,7 @@
 
 OBJECTDIR=target/objects
 CURDIR=`pwd`
-MODULE_NAME="bsd_rust"
+MODULE_NAME="geom_md"
 
 if [ -d "${OBJECTDIR}" ]; then
 	rm -rf "${OBJECTDIR}"

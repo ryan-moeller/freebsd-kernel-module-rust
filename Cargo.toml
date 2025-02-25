@@ -2,10 +2,10 @@
 members = [
 	"bsd-kernel",
 	"kernel-sys",
-	"module-hello",
+	"module-geom_md",
 ]
 default-members = [
-	"module-hello",
+	"module-geom_md",
 ]
 resolver = "3"
 
